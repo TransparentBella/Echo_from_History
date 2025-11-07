@@ -1,0 +1,557 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>⚔️ 历史平行对话 Agent</title>
+    <style>
+        /* 全局基础设置 */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'PingFang SC', 'Microsoft YaHei', sans-serif;
+        }
+
+        /* 1. BODY: 理性、沉稳的背景 */
+        body {
+            background-color: #F8F8F8;
+            color: #333;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px 0;
+        }
+
+        .container {
+            max-width: 1400px; /* 增大容器以容纳三栏 */
+            width: 95%;
+            height: 90vh; 
+            background-color: white; 
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+            border-radius: 15px;
+            overflow: hidden;
+            display: flex; 
+            opacity: 0; 
+            transition: opacity 0.8s ease;
+        }
+
+        /* 2. 左侧设置面板 (固定宽度) */
+        #settings-panel {
+            flex: 0 0 320px; /* 增大左侧宽度，容纳两个角色设置 */
+            padding: 20px;
+            overflow-y: auto;
+            background-color: #EFEFEF; 
+            border-right: 1px solid #DDD;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        /* 角色卡片样式 */
+        .character-card {
+            padding: 15px;
+            border-radius: 10px;
+            background-color: #FFF;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+            border: 1px solid #DDD;
+        }
+        
+        .char-avatar {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background-color: #AAA;
+            margin: 0 auto 10px;
+            font-size: 2rem;
+            line-height: 60px;
+            color: white;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            text-align: center;
+        }
+
+        /* 3. 中间对话区 (占据最大空间) */
+        .dialogue-area {
+            flex: 1; 
+            display: flex;
+            flex-direction: column;
+            background-color: #FAFAFA;
+            border-right: 1px solid #DDD;
+        }
+
+        /* 新增：辩论主题容器样式 */
+        #debate-theme-container {
+            padding: 10px 20px;
+            text-align: center;
+            border-bottom: 1px solid #EAEAEA;
+            background-color: #FFF;
+        }
+        #debate-theme-container label {
+            font-weight: 600;
+            color: #4682B4; /* 突出颜色 */
+        }
+
+        .chat-history {
+            flex-grow: 1;
+            padding: 20px;
+            overflow-y: auto;
+        }
+
+        .chat-input {
+            padding: 15px 20px;
+            display: flex;
+            gap: 10px;
+            background-color: #FFF;
+        }
+
+        /* 4. 右侧控制台 (固定宽度) */
+        #control-panel {
+            flex: 0 0 280px; /* 控制台宽度 */
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            background-color: #E6E6E6;
+        }
+
+
+        /* 5. 对话气泡样式 (省略未修改部分) */
+        .message {
+            display: flex;
+            margin-bottom: 15px;
+        }
+
+        .message.left .bubble {
+            background-color: #DDEEFF; 
+            color: #333;
+            border-radius: 15px 15px 15px 0;
+            margin-right: auto;
+        }
+        
+        .message.right {
+            justify-content: flex-end;
+        }
+        .message.right .bubble {
+            background-color: #E6E6FA; 
+            color: #333;
+            border-radius: 15px 15px 0 15px;
+            margin-left: auto;
+        }
+
+        .bubble {
+            max-width: 60%;
+            padding: 12px 18px;
+            line-height: 1.6;
+            font-size: 1rem;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+        }
+
+        /* 6. 通用元素 (省略未修改部分) */
+        h1, h2, h3 {
+            color: #4682B4;
+        }
+        
+        label {
+            font-weight: 600;
+            color: #555;
+            margin-top: 5px;
+        }
+
+        input[type="text"], select {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #DDD;
+            border-radius: 4px;
+            font-size: 1rem;
+        }
+        
+        .btn {
+            background: linear-gradient(to right, #4682B4, #6495ED);
+            color: white;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-weight: 600;
+        }
+
+        .btn:disabled {
+            background: #AAA;
+            cursor: not-allowed;
+        }
+        
+        /* 响应式调整 (简化为垂直堆叠) (未修改) */
+        @media (max-width: 1200px) {
+            .container {
+                flex-direction: column;
+                height: auto;
+                min-height: 90vh;
+            }
+            #settings-panel, #control-panel {
+                flex: 0 0 auto;
+                width: 100%;
+                border-right: none;
+                border-bottom: 1px solid #DDD;
+            }
+            #settings-panel {
+                order: 1;
+            }
+            .dialogue-area {
+                order: 2;
+                height: 60vh; /* 确保对话区仍有一定高度 */
+            }
+            #control-panel {
+                order: 3;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container" id="main-container" style="opacity: 0;">
+        
+        <div id="settings-panel">
+            <h2 style="color: #4682B4;">✍️ 角色设定台</h2>
+
+            <div class="character-card">
+                <h3 style="margin-bottom: 10px;">角色 A</h3>
+                <div class="char-avatar" id="avatar-a">👴</div>
+                <label for="name-a">名称:</label>
+                <input type="text" id="name-a" value="孔子" placeholder="人物名称">
+                <label for="desc-a">身份/核心哲学:</label>
+                <input type="text" id="desc-a" value="儒家创始人, 重仁义和礼治" placeholder="简短身份描述">
+                <label for="persona-a">性格/风格:</label>
+                <input type="text" id="persona-a" value="温文尔雅, 逻辑严密, 引用经典" placeholder="例如：激进，幽默，理性">
+            </div>
+
+            <div class="character-card">
+                <h3 style="margin-bottom: 10px;">角色 B</h3>
+                <div class="char-avatar" id="avatar-b" style="background-color: #555;">🤖</div>
+                <label for="name-b">名称:</label>
+                <input type="text" id="name-b" value="马斯克" placeholder="人物名称">
+                <label for="desc-b">身份/核心哲学:</label>
+                <input type="text" id="desc-b" value="科技企业家, 关注火星殖民与AI" placeholder="简短身份描述">
+                <label for="persona-b">性格/风格:</label>
+                <input type="text" id="persona-b" value="大胆激进, 语速快, 侧重未来主义" placeholder="例如：激进，幽默，理性">
+            </div>
+            
+        </div>
+
+        <div class="dialogue-area">
+            <h1 style="padding: 15px; text-align: center; font-size: 1.8rem; border-bottom: 1px solid #DDD;">⚔️ 历史平行对话</h1>
+            
+            <div id="debate-theme-container">
+                <label for="theme">辩论主题：</label>
+                <input type="text" id="theme" placeholder="例如：技术发展与人类自由的关系">
+            </div>
+            
+            <div class="chat-history" id="chat-history">
+                <p style="text-align: center; color: #888; padding: 20px;">请在左侧设定人物，设定主题，然后在右侧点击“开始辩论”！</p>
+            </div>
+            
+            <div class="chat-input">
+                <input type="text" id="user-input" placeholder="输入您的观点或挑战 (可选)..." disabled>
+                <button class="btn" id="send-btn" disabled>介入</button>
+            </div>
+        </div>
+
+        <div id="control-panel">
+            <h2 style="color: #4682B4;">🕹️ 流程控制台</h2>
+            
+            <label for="turns">自动辩论轮数：</label>
+            <select id="turns">
+                <option value="1">1 轮 (双方各发言一次)</option>
+                <option value="2">2 轮</option>
+                <option value="3" selected>3 轮 (默认)</option>
+                <option value="4">4 轮</option>
+            </select>
+            
+            <button class="btn" id="start-btn" style="background: #28a745; margin-top: 20px;">🚀 开始辩论</button>
+            <button class="btn" id="continue-btn" disabled>➡️ 自动进行下一轮</button>
+            <button class="btn" id="reset-scene" style="background: #dc3545;">🗑️ 重置场景</button>
+
+            <div class="error-message" id="error-message" style="color: #dc3545; font-size: 0.9rem; margin-top: 10px; display: none;"></div>
+        </div>
+        
+    </div>
+
+    <script>
+        // API密钥占位符
+        const API_KEY = 'dc8c102cf12b429087166045e70a6a02.mq2zID9rW1Anthp0'; 
+
+        document.addEventListener('DOMContentLoaded', function() {
+            // --- UI 元素获取 (新增 persona) ---
+            const mainContainer = document.getElementById('main-container');
+            const chatHistory = document.getElementById('chat-history');
+            
+            const nameA = document.getElementById('name-a');
+            const descA = document.getElementById('desc-a');
+            const personaA = document.getElementById('persona-a'); // 新增
+            
+            const nameB = document.getElementById('name-b');
+            const descB = document.getElementById('desc-b');
+            const personaB = document.getElementById('persona-b'); // 新增
+            
+            const themeInput = document.getElementById('theme'); // **保留在中间区域**
+            const turnsSelect = document.getElementById('turns');
+            const startBtn = document.getElementById('start-btn');
+            const continueBtn = document.getElementById('continue-btn');
+            const resetBtn = document.getElementById('reset-scene');
+            const userInput = document.getElementById('user-input');
+            const sendBtn = document.getElementById('send-btn');
+            const errorMessage = document.getElementById('error-message');
+
+            // --- 状态管理 (保持不变) ---
+            let dialogueHistory = [];
+            let currentTurn = 0;
+            let totalTurns = 3;
+            let currentSpeaker = 'A'; // 'A' 或 'B'
+
+            // **初始化显示**
+            mainContainer.style.opacity = '1';
+            
+            // --- 辅助函数 ---
+            function showError(message) {
+                errorMessage.textContent = message;
+                errorMessage.style.display = 'block';
+                setTimeout(() => { errorMessage.style.display = 'none'; }, 7000);
+            }
+            
+            // 渲染对话气泡 (保持不变)
+            function renderMessage(speaker, content) {
+                const messageDiv = document.createElement('div');
+                
+                let position;
+                let charName;
+                if (speaker === 'A' || speaker === nameA.value) {
+                    position = 'left';
+                    charName = nameA.value;
+                } else if (speaker === 'B' || speaker === nameB.value) {
+                    position = 'right';
+                    charName = nameB.value;
+                } else {
+                    // 裁判发言
+                    position = 'center'; 
+                    charName = '裁判';
+                }
+                
+                messageDiv.classList.add('message', position);
+                messageDiv.innerHTML = `
+                    <div class="bubble">
+                        <strong>${charName}:</strong><br>
+                        ${content.replace(/\n/g, '<br>')}
+                    </div>
+                `;
+                chatHistory.appendChild(messageDiv);
+                chatHistory.scrollTop = chatHistory.scrollHeight;
+            }
+            
+            // --- 核心函数：Agent API 调用 (保持不变) ---
+            async function callGLMAPI(prompt) {
+                // ... (API 调用逻辑，保持不变) ...
+                if (API_KEY != 'dc8c102cf12b429087166045e70a6a02.mq2zID9rW1Anthp0') {
+                    showError('警告：API 密钥未设置，请替换为您的智谱密钥。');
+                    throw new Error('API 密钥未设置。');
+                }
+                
+                const messages = [{ role: "user", content: prompt }];
+                const requestBody = {
+                    model: "glm-4",
+                    messages: messages,
+                    temperature: 0.8,
+                    max_tokens: 1500 
+                };
+                
+                const response = await fetch('https://open.bigmodel.cn/api/paas/v4/chat/completions', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${API_KEY}`
+                    },
+                    body: JSON.stringify(requestBody)
+                });
+                
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(`API请求失败: ${response.status} - ${errorData.detail || errorData.message}`);
+                }
+                
+                const data = await response.json();
+                return data.choices[0].message.content.trim();
+            }
+
+            // --- 核心逻辑：生成下一轮发言 (更新 Prompt 模板以包含 Persona) ---
+            async function generateNextTurn(isAuto = true, userChallenge = '') {
+                // 确保只有在自动轮次且未结束时，或者用户介入时才继续
+                if (isAuto && currentTurn >= totalTurns && dialogueHistory.length > 0 && !userChallenge) {
+                    continueBtn.disabled = true;
+                    showError('自动辩论轮次已结束。请点击“重置场景”开始新的辩论，或点击“介入”继续自由辩论。');
+                    return;
+                }
+                
+                // 锁定按钮
+                startBtn.disabled = true;
+                continueBtn.disabled = true;
+                sendBtn.disabled = true;
+                userInput.disabled = true;
+                
+                const theme = themeInput.value.trim();
+                const charA = { name: nameA.value.trim(), desc: descA.value.trim(), persona: personaA.value.trim() };
+                const charB = { name: nameB.value.trim(), desc: descB.value.trim(), persona: personaB.value.trim() };
+                
+                try {
+                    // 确定发言人
+                    const speaker = (currentSpeaker === 'A') ? charA : charB;
+                    const listener = (currentSpeaker === 'A') ? charB : charA;
+
+                    // 构造新的，包含 persona 的 Prompt
+                    let prompt = '';
+                    const personaInstruction = `你的语言风格和态度必须严格遵循你的性格设定：【${speaker.persona}】。`;
+
+                    if (dialogueHistory.length === 0) {
+                        // 第一轮发言
+                        prompt = `现在开始一场关于【${theme}】的辩论。你是【${speaker.name}】，身份是：${speaker.desc}。${personaInstruction} 请你首先发言，对主题提出你的核心观点。保持发言在150字以内。你的发言必须严格遵循自己的身份和特点，以本人的口吻发言，发言不得包含任何与发言内容无关的内容`;
+                    } else if (userChallenge) {
+                         // 用户介入后的发言
+                        prompt = `当前辩论主题是【${theme}】。你是【${speaker.name}】，身份是：${speaker.desc}。${personaInstruction} 裁判（用户）刚刚介入并提出了以下挑战：“${userChallenge}”。请你针对这个挑战，结合你最近的发言和对方的观点，进行回应。保持发言在150字以内。你的发言必须严格遵循自己的身份和特点，以本人的口吻发言，发言不得包含任何与发言内容无关的内容。最近的对话记录：\n${dialogueHistory.map(d => `${d.speaker}: ${d.content}`).slice(-4).join('\n')}`;
+                    } else {
+                        // 正常轮换发言
+                        prompt = `当前辩论主题是【${theme}】。你是【${speaker.name}】，身份是：${speaker.desc}。${personaInstruction} 请你针对【${listener.name}】的最新观点进行反驳或回应。保持发言在150字以内。你的发言必须严格遵循自己的身份和特点，以本人的口吻发言，发言不得包含任何与发言内容无关的内容。最近的对话记录：\n${dialogueHistory.map(d => `${d.speaker}: ${d.content}`).slice(-4).join('\n')}`;
+                    }
+
+                    // 1. 调用 Agent
+                    const response = await callGLMAPI(prompt);
+                    
+                    // 2. 渲染和记录
+                    renderMessage(speaker.name, response);
+                    dialogueHistory.push({ speaker: speaker.name, content: response });
+                    
+                    // 3. 更新状态
+                    currentSpeaker = (currentSpeaker === 'A') ? 'B' : 'A'; // 切换发言人
+                    
+                    // 如果是自动轮次，增加轮数计数
+                    if (isAuto && !userChallenge) {
+                        currentTurn++;
+                    }
+                    
+                } catch (error) {
+                    console.error('辩论生成失败:', error);
+                    showError(`发言失败：${error.message}`);
+                } finally {
+                    // 解锁按钮
+                    const totalSpeechCount = dialogueHistory.filter(d => d.speaker !== '裁判').length;
+                    
+                    if (totalSpeechCount < totalTurns * 2) {
+                        continueBtn.disabled = false;
+                    } else {
+                         continueBtn.disabled = true;
+                    }
+                    
+                    if (dialogueHistory.length > 0) {
+                        userInput.disabled = false;
+                        sendBtn.disabled = false;
+                    }
+                    
+                    // 如果是自动轮次，继续进行下一轮直到轮数结束
+                    if (isAuto && totalSpeechCount < totalTurns * 2) {
+                        // 稍作延迟，模拟思考时间
+                        setTimeout(() => {
+                            generateNextTurn(true);
+                        }, 3000); 
+                    }
+                }
+            }
+
+            // --- 事件监听器 (保持不变，但逻辑依赖新的 generateNextTurn) ---
+
+            // 监听轮次选择
+            turnsSelect.addEventListener('change', (e) => {
+                totalTurns = parseInt(e.target.value);
+            });
+
+            // 启动辩论
+            startBtn.addEventListener('click', () => {
+                const theme = themeInput.value.trim();
+                if (!theme) {
+                    showError('请输入辩论主题！');
+                    return;
+                }
+                
+                // 锁定设置
+                themeInput.disabled = true; // **锁定中间区域的主题输入框**
+                turnsSelect.disabled = true;
+                nameA.disabled = true;
+                descA.disabled = true;
+                personaA.disabled = true; // 锁定
+                nameB.disabled = true;
+                descB.disabled = true;
+                personaB.disabled = true; // 锁定
+
+                // 初始化状态
+                dialogueHistory = [];
+                currentTurn = 0;
+                currentSpeaker = 'A'; 
+                chatHistory.innerHTML = '';
+                
+                // 启动第一轮
+                generateNextTurn(true);
+            });
+
+            // 自动继续下一轮
+            continueBtn.addEventListener('click', () => {
+                generateNextTurn(true);
+            });
+            
+            // 用户介入并发送
+            sendBtn.addEventListener('click', async () => {
+                const challenge = userInput.value.trim();
+                if (!challenge) return;
+
+                // 渲染用户发言 (作为裁判/第三方)
+                renderMessage('裁判', `【裁判介入】：${challenge}`);
+                dialogueHistory.push({ speaker: '裁判', content: challenge });
+                
+                userInput.value = '';
+                userInput.disabled = true;
+                sendBtn.disabled = true;
+                continueBtn.disabled = true;
+                
+                // 让当前轮到发言的 Agent (currentSpeaker) 针对用户的挑战进行回应
+                await generateNextTurn(false, challenge); 
+                
+                // 再次让下一位 Agent 针对上一位的回应进行反驳 (保持自动轮换逻辑)
+                await generateNextTurn(true); 
+            });
+
+
+            // 重置场景
+            resetBtn.addEventListener('click', () => {
+                // 解锁设置
+                themeInput.disabled = false; // **解锁中间区域的主题输入框**
+                turnsSelect.disabled = false;
+                nameA.disabled = false;
+                descA.disabled = false;
+                personaA.disabled = false; // 解锁
+                nameB.disabled = false;
+                descB.disabled = false;
+                personaB.disabled = false; // 解锁
+
+                // 按钮状态
+                startBtn.disabled = false;
+                continueBtn.disabled = true;
+                userInput.disabled = true;
+                sendBtn.disabled = true;
+                
+                // 清理界面
+                chatHistory.innerHTML = '<p style="text-align: center; color: #888; padding: 20px;">请在左侧设定人物，设定主题，然后在右侧点击“开始辩论”！</p>';
+                dialogueHistory = [];
+                currentTurn = 0;
+                currentSpeaker = 'A';
+                userInput.value = '';
+                showError('');
+            });
+        });
+    </script>
+</body>
+</html>
